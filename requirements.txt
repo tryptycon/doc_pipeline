@@ -1,0 +1,28 @@
+# --- API serving ---
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+pydantic>=2.7
+
+# --- PDF / image handling ---
+pymupdf>=1.24
+pillow>=10.3
+opencv-python-headless>=4.10
+numpy>=1.26
+
+# --- Layout + OCR/transcription (PaddleOCR-VL) ---
+# Pick ONE paddlepaddle line for your hardware (do not install both):
+# paddlepaddle==3.2.1                      # CPU
+# paddlepaddle-gpu==3.2.1                  # GPU, see README for the correct
+#                                             -i index URL for your CUDA version
+paddleocr[doc-parser]>=3.4.0
+
+# --- Signature detection ---
+ultralytics>=8.3        # AGPL-3.0 -- see app/signature_detector.py for the
+                         # Apache-2.0 Conditional-DETR alternative if needed
+huggingface_hub>=0.24
+supervision>=0.21        # only needed if you use the annotated-image demo path
+
+# --- Batch / scaling (optional, see README "Scaling to millions of documents") ---
+# celery>=5.4
+# redis>=5.0

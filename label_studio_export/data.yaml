@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 16
+names: ['afidivitstamp', 'antritgovtstamp', 'barcode', 'fingerprint', 'govtstamp', 'jantadarsan', 'letterhead', 'logo', 'logowithsign', 'mohar', 'namemohar', 'partylogo', 'pinkstamp', 'signature', 'signnamestamp', 'speedpoststamp']
+
+roboflow:
+  workspace: gaurav-singh-dk04k
+  project: ocrobjectdetector
+  version: 3
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/gaurav-singh-dk04k/ocrobjectdetector/dataset/3

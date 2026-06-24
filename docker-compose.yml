@@ -1,0 +1,44 @@
+# Optional: only needed once you outgrow a single machine's
+# multiprocessing.Pool (see scripts/batch_runner.py and the README's
+# "Scaling to millions of documents" section). Not required to run the
+# FastAPI app or the single-machine batch runner.
+#
+# Usage:
+#   docker compose up --scale worker=4
+#
+# This does NOT include a GPU-enabled worker image -- if your worker needs
+# GPU access for PaddleOCR-VL/the signature detector, add `runtime: nvidia`
+# (or `deploy.resources.reservations.devices` under Compose's GPU spec) to
+# the worker service and build from an image with the matching CUDA/paddle
+# install from requirements.txt.
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  api:
+    build: .
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./outputs:/app/outputs
+    depends_on:
+      - redis
+
+  worker:
+    build: .
+    command: celery -A app.celery_worker worker --loglevel=info
+    volumes:
+      - ./outputs:/app/outputs
+    depends_on:
+      - redis
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
