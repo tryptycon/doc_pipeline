@@ -125,7 +125,7 @@ exactly that.
 
 tain model by shailendra
 
-python3 training/train_detector.py label_studio_export/data.yaml --epochs 5 --imgsz 1280 --batch 8
+- python3 training/train_detector.py label_studio_export/data.yaml --epochs 5 --imgsz 1280 --batch 8
 
 
 
@@ -142,8 +142,8 @@ bashunzip doc_pipeline_production.zip && cd doc_pipeline
 python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 # pick ONE, matching your hardware:
-pip install paddlepaddle-gpu==3.2.1 -i https://www.paddlepaddle.org.cn/packages/stable/cu126/   # GPU, CUDA 12.6
-pip install paddlepaddle==3.2.1 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/          # CPU
+- pip install paddlepaddle-gpu==3.2.1 -i https://www.paddlepaddle.org.cn/packages/stable/cu126/   # GPU, CUDA 12.6
+- pip install paddlepaddle==3.2.1 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/          # CPU
 1. Running the batch pipeline
 bash# test on a small folder first (2-3 files) before pointing it at millions
 python scripts/batch_runner.py /path/to/input_pdfs /path/to/output_dir
