@@ -125,5 +125,56 @@ exactly that.
 
 tain model by shailendra
 
-python3 training/train_detector.py label_studio_export/data.yaml \ 
-    --epochs 100 --imgsz 1280 --batch 8
+python3 training/train_detector.py label_studio_export/data.yaml --epochs 5 --imgsz 1280 --batch 8
+
+
+
+fine-tuned weights land in runs/signature_finetune/exp/weights/best.pt.
+
+- python training/eval_detector.py runs/detect/runs/signature_finetune/exp-6/weights/best.pt label_studio_export/data.yaml   
+
+
+
+
+Here's the concrete walkthrough for both pieces — these aren't runnable in this chat sandbox (no GPU/Hugging Face access here), so do this on your own machine after unzipping doc_pipeline_production.zip.
+Setup first (once):
+bashunzip doc_pipeline_production.zip && cd doc_pipeline
+python -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+# pick ONE, matching your hardware:
+pip install paddlepaddle-gpu==3.2.1 -i https://www.paddlepaddle.org.cn/packages/stable/cu126/   # GPU, CUDA 12.6
+pip install paddlepaddle==3.2.1 -i https://www.paddlepaddle.org.cn/packages/stable/cpu/          # CPU
+1. Running the batch pipeline
+bash# test on a small folder first (2-3 files) before pointing it at millions
+python scripts/batch_runner.py /path/to/input_pdfs /path/to/output_dir
+What happens: it scans input_pdfs for .pdf/.png/.jpg, processes each through the full pipeline, and writes per-document folders under output_dir:
+output_dir/
+  some_doc_a1b2c3/
+    main_content.pdf       # cleaned pages, artifacts removed
+    main_content.md        # transcribed text
+    page_1/stamp_1.png, signature_1.png, ...
+    manifest.json          # bbox + confidence for every extracted region
+It defaults to num_workers=1 on purpose — each worker process loads its own full copy of the model, so on a single GPU, raising this without checking VRAM (nvidia-smi while it runs) is the fastest way to OOM:
+bashpython scripts/batch_runner.py /path/to/input_pdfs /path/to/output_dir 1   # safe default
+python scripts/batch_runner.py /path/to/input_pdfs /path/to/output_dir 4   # only if VRAM allows
+Failures get logged to batch_errors.log instead of killing the whole run — check that file after a big batch.
+Once you're past what one machine can do, that's when the README's Celery/Redis (docker-compose up) or vLLM-serving step makes sense — same per-file logic, just dispatched across more machines or sharing one model server.
+2. Fine-tuning the stamp/signature detector on your own scans
+bashpip install label-studio
+label-studio start
+
+In the browser UI: create a project → Object Detection template → define labels stamp, seal, signature, thumbprint → upload ~300–1000 representative pages (mix typed + handwritten, different stamp inks/colors — diversity matters more than raw count here, since you're fine-tuning, not training from scratch).
+Label every instance of those 4 things on each page.
+Export → YOLO format — gives you a zip with images/, labels/, classes.txt.
+
+Then:
+bashpython training/prepare_yolo_dataset.py /path/to/label_studio_export /path/to/dataset_out \
+    --val-frac 0.15 --test-frac 0.15
+→ writes dataset_out/{train,val,test}/ + dataset_out/dataset.yaml.
+bashpython training/train_detector.py /path/to/dataset_out/dataset.yaml --epochs 100 --imgsz 1280
+→ fine-tuned weights land in runs/signature_finetune/exp/weights/best.pt.
+bashpython training/eval_detector.py runs/signature_finetune/exp/weights/best.pt /path/to/dataset_out/dataset.yaml
+→ precision/recall/mAP@0.5 per class on the held-out test split — compare this against the pretrained model's numbers on the same test set so you know fine-tuning actually helped before trusting it on real volume.
+One wiring step the README doesn't spell out: to actually use best.pt instead of the stock download, edit app/signature_detector.py — swap the hf_hub_download(...) call for just pointing YOLO() at your local path:
+python_model = YOLO("/path/to/runs/signature_finetune/exp/weights/best.pt")
+Want me to write that edit into the zip directly, or walk through reading the per-class eval numbers once you have them?
